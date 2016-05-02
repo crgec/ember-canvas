@@ -3,6 +3,9 @@
 var EmberAddon = require('ember-cli/lib/broccoli/ember-addon');
 
 module.exports = function(defaults) {
+  defaults.babel = {
+    optional: ['es7.decorators']
+  };
   var app = new EmberAddon(defaults, {
     // Add options here
   });

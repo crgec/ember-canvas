@@ -1,0 +1,10 @@
+<canvas
+    ontouchstart={{action 'onTouchStart'}}
+    ontouchend={{action 'onTouchEnd'}}
+    ontouchmove={{action 'onTouchMove'}}
+    ontouchcancel={{action 'onTouchCancel'}}
+    onclick={{action 'onClick'}}
+    ondblclick={{action 'onDoubleClick'}}
+    oncontextmenu={{action 'onContextMenu'}}>
+        {{yield (hash image=(component 'canvas-image' draw=(action draw)))}}
+</canvas>
