@@ -1,10 +1,9 @@
-<canvas
-    ontouchstart={{action 'onTouchStart'}}
-    ontouchend={{action 'onTouchEnd'}}
-    ontouchmove={{action 'onTouchMove'}}
-    ontouchcancel={{action 'onTouchCancel'}}
-    onclick={{action 'onClick'}}
-    ondblclick={{action 'onDoubleClick'}}
-    oncontextmenu={{action 'onContextMenu'}}>
-        {{yield (hash image=(component 'canvas-image' draw=(action draw)))}}
-</canvas>
+<pre>
+  Selected Tool: {{selectedTool}}
+</pre>
+<ul class="tools">
+  <li><button {{action 'capture' 'comment'}}>Comment</button></li>
+  <li><button {{action 'capture' '#smockin'}}>#smockin</button></li>
+  <li><button {{action 'capture' 'fire'}}>🔥 Somebody stop me</button></li>
+</ul>
+<canvas></canvas>
