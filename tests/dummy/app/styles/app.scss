@@ -1,0 +1,49 @@
+html,
+body {
+    margin: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+.surface {
+  $preview-bg-color: rgba(21, 32, 36, 0.95);
+  $preview-button-size: 23px;
+  $preview-footer-height: 6rem;
+  $preview-footer-height-lg: 6rem;
+  // width and height of preview UI buttons
+  $color-white: #fff;
+  $color-unsupported: #758d97;
+  $color-unsupported-bg: rgba(144, 168, 178, 0.15); //#90a8b2;
+  $color-unsupported-text: rgb(144, 168, 178);
+  $color-unsupported-hover: rgba(144, 168, 178, 0.3);
+
+  $bg-color: $preview-bg-color;
+  $button-size: $preview-button-size;
+  $footer-height: $preview-footer-height;
+  $footer-height-lg: $preview-footer-height-lg;
+
+  // colours of meta info and links
+  $meta-color: #748d97;
+  $meta-color-light: #99b1bb;
+
+  height: 100%;
+  background: $bg-color;
+
+  /* Scale canvas with resize attribute to full size */
+  canvas[resize] {
+      width: 100%;
+      height: 100%;
+  }
+
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 5rem;
+    padding: 0 1rem;
+    background: opacify($bg-color, 0.15);
+    color: $color-white;
+  }
+}
+

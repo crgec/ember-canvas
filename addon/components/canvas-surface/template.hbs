@@ -1,9 +1,12 @@
-<pre>
-  Selected Tool: {{selectedTool}}
-</pre>
-<ul class="tools">
-  <li><button {{action 'capture' 'comment'}}>Comment</button></li>
-  <li><button {{action 'capture' '#smockin'}}>#smockin</button></li>
-  <li><button {{action 'capture' 'fire'}}>🔥 Somebody stop me</button></li>
-</ul>
-<canvas></canvas>
+<header class="preview-header">
+  <div class="button-group">
+    <button type="button" {{action 'zoom'}}>Zoom</button>
+  </div>
+
+  <div class="button-group">
+    {{!-- close button --}}
+    <button {{action 'close'}} class="sbe-preview__btn sbe-preview__btn--close" type="button">X</button>
+  </div>
+</header>
+
+<canvas resize></canvas>

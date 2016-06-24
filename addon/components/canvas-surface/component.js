@@ -22,9 +22,9 @@ const multiply = (...dependencies) =>
       .reduce((a, b) => a * b);
   });
 
-@requiredAttr('width', Number)
-@requiredAttr('height', Number)
-@optionalAttr('scale', Number)
+// @requiredAttr('width', Number)
+// @requiredAttr('height', Number)
+// @optionalAttr('scale', Number)
 export default class extends Component.extend({
   layout,
   selectedTool: null,
@@ -46,39 +46,91 @@ export default class extends Component.extend({
     return new Frame(left, top, width, height);
   }),
 
+  didInsertElement() {
+    this._super(...arguments);
+    let canvas = this.getCanvas();
+    paper.setup(canvas);
+    // Create a Paper.js Path to draw a line into it:
+		var path = new paper.Path();
+    var raster = new paper.Raster('images/smokin.jpg');
+    raster.position = paper.view.center;
+		paper.view.draw();
+
+    var source = Rx.Observable.fromEventPattern(
+      function add (h) {
+        paper.view.onResize = h;
+      },
+      function remove (h) {
+        paper.view.onResize = null;
+      }
+    );
+
+    source.subscribe((e) => {
+      raster.position = paper.view.center;    
+    });
+  },
+
   init() {
     this._super(...arguments);
     Ember.run.scheduleOnce('afterRender', () => {
       let canvas = this.getCanvas();
-      let {
-        scaledWidth,
-        scaledHeight,
-        scale
-      } = this.getProperties('scaledWidth', 'scaledHeight', 'scale');
-      canvas.width = scaledWidth;
-      canvas.height = scaledHeight;
-      let ctx = canvas.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.scale(scale, scale);
       let clickStream = Rx.Observable.fromEvent(canvas, 'click');
-      let commandStream = get(this, 'commandStream');
+      let scrollStream = Rx.Observable.fromEvent(canvas, 'mousewheel');
 
-      commandStream.subscribe((command) => set(this, 'selectedTool', command));
+      scrollStream.subscribe((e) => {
+        let { offsetX, offsetY, deltaY } = e;
+        let { view, Point } = paper;
+        let mousePosition = new Point(offsetX, offsetY);
+        let viewPosition = view.viewToProject(mousePosition)
+        let center = view.center;
+        let oldZoom = view.zoom;
+        let [newZoom, offset] = this.changeZoom(view.zoom, deltaY, center, viewPosition);
+        view.zoom = newZoom;
+        view.center = view.center.add(offset);
+        e.preventDefault();
+        view.draw();
+      });
 
-      clickStream.withLatestFrom(commandStream, (click, command) => {
-        return { command, click };
-      }).subscribe((e) => {
-        let { command, click: { layerX, layerY } } = e;
-        switch(command) {
-          case '#smockin':
-            this.drawAvatar(layerX, layerY);
-            break;
-          case 'fire':
-            this.drawFire(layerX, layerY);
-            break;
+      var tool = new paper.Tool();
+      tool.activate();
+		  var path;
+
+      var mouseDownStream = Rx.Observable.fromEventPattern(
+        function add (h) {
+          tool.onMouseDown = h;
         }
+      );
+      var mouseDragStream = Rx.Observable.fromEventPattern(
+        function add (h) {
+          tool.onMouseDrag = h;
+        }
+      );
+
+      mouseDragStream.subscribe((e) => {
+        path.add(e.point);
+      });
+
+      mouseDownStream.subscribe((e) => {
+        path = new paper.Path();
+        path.add(e.point);
+        path.strokeColor = 'white';
       });
     });
+  },
+
+  changeZoom(oldZoom, delta, c, p) {
+    let factor = 1.05;
+    let newZoom = oldZoom;
+    if (delta < 0) {
+      newZoom = oldZoom * factor;
+    }
+    if (delta > 0) {
+      newZoom = oldZoom / factor;
+    }
+    let beta = oldZoom / newZoom;
+    let pc = p.subtract(c);
+    let a = p.subtract(pc.multiply(beta)).subtract(c);
+    return [newZoom, a];
   },
 
   getCanvas() {
@@ -86,94 +138,12 @@ export default class extends Component.extend({
     return canvas;
   },
 
-  drawAvatar(x, y) {
-    let image = new Image();
-    let onLoad = ({ target }) => this.handleImageLoad(target, x, y);
-    image.onload = onLoad;
-    image.src = 'images/smokin.jpg';
-  },
-
-  drawFire(x, y) {
-    return new Ember.RSVP.Promise((resolve) => {
-      let canvas = this.getCanvas();
-      let context = canvas.getContext('2d');
-
-      context.save();
-      context.beginPath();
-      context.lineWidth = 1;
-      context.strokeStyle = '#003300';
-      context.arc(x, y, 30,0,Math.PI*2);
-      context.stroke();
-      context.font="30px sans-serif";
-      context.fillText("🔥", x-15, y+15);
-      context.closePath();
-      context.restore();
-      resolve(context);
-    });
-  },
-
-  handleImageLoad(image, x, y) {
-    let frame = new Frame(x - 30, y - 30, 60, 60);
-    return this.drawImage(image, frame, 0)
-    // .then(() => {
-    //   let canvas = this.getCanvas();
-    //   let context = canvas.getContext('2d');
-    //   context.save();
-    //   context.beginPath();
-    //   context.lineWidth = 1;
-    //   context.strokeStyle = '#003300';
-    //   context.arc(frame.x+30, frame.y+30, (frame.width/2)+1,0,Math.PI*2,true);
-    //   context.stroke();
-    //   context.closePath();
-    //   context.restore();
-    // });
-  },
-
-  drawImage(image, frame, initialAlpha = 1) {
-    let canvas = this.getCanvas();
-    let context = canvas.getContext('2d');
-    return new Ember.RSVP.Promise((resolve) => {
-      this.stepThroughAnimation(image, frame, initialAlpha, resolve);
-    });
-  },
-
-  stepThroughAnimation(image, frame, imageAlpha, onComplete) {
-    let fadeInDuration = this.getWithDefault('fadeInDuration', FADE_DURATION);
-    let alpha = easeInCubic((Date.now() - this._animationStartTime) / fadeInDuration);
-    this.setProperties({ imageAlpha });
-    this.draw(image, frame, imageAlpha);
-    if (imageAlpha < 1) {
-      return requestAnimationFrame(() => {
-        return this.stepThroughAnimation(image, frame, Math.min(Math.max(alpha, 0), 1), onComplete);
-      });
-    }
-    return onComplete();
-  },
-
-  draw(element, { x, y, width, height }, alpha) {
-    let canvas = this.getCanvas();
-    let context = canvas.getContext('2d');
-    return new Ember.RSVP.Promise((resolve) => {
-      context.save();
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.globalAlpha = alpha;
-
-      context.beginPath();
-      context.arc(x+30, y+30, width/2, 0, Math.PI*2, true);
-      context.clip();
-      context.drawImage(element, x, y, width, height);
-      context.closePath();
-      context.restore();
-
-      context.restore();
-      resolve(context);
-    });
-  },
-
   actions: {
-    capture(e) {
-      let commandStream = get(this, 'commandStream');
-      commandStream.onNext(e);
+    zoom() {
+
+    },
+    close() {
+
     }
   }
 }) { }
